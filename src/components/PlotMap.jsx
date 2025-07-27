@@ -7,7 +7,7 @@ const PlotMap = () => {
   const [selectedPlot, setSelectedPlot] = useState(null);
 
   useEffect(() => {
-    fetch("/future-plan-data.json")
+   fetch(`${import.meta.env.BASE_URL}future-plan-data.json`)
       .then((res) => res.json())
       .then((data) => {
         const filtered = data
@@ -60,10 +60,10 @@ const PlotMap = () => {
       {/* Layout Image */}
       <div
         className="relative bg-contain bg-center h-[880px] bg-no-repeat"
-        style={{ backgroundImage: `url("/images/future-layout.jpg")` }}
+       style={{ backgroundImage: `url("./images/future-layout.jpg")` }}
       >
         <img
-          src="/images/gsquare-logo.jpg"
+          src="./images/gsquare-logo.jpg"
           alt="G Square Logo"
           className="absolute top-5 left-5 w-40"
         />
