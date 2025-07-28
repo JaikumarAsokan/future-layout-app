@@ -4,26 +4,17 @@ const PlotMap = () => {
   const [plots, setPlots] = useState([]);
   const [hoveredPlot, setHoveredPlot] = useState(null);
   const [selectedPlot, setSelectedPlot] = useState(null);
-  const [areaRange, setAreaRange] = useState([189, 5527]);
-
-  const MIN_AREA = 189;
-  const MAX_AREA = 5527;
+  const [selectedArea, setSelectedArea] = useState("");
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}future-plan-data.json`)
       .then((res) => res.json())
       .then((data) => {
         const filtered = data
-          .map((plot) => {
-            const rawArea = parseFloat(
-              typeof plot.Area === "string" ? plot.Area.split(" ")[0] : "0"
-            );
-            return {
-              ...plot,
-              plotNo: parseInt(plot.plotNo),
-              areaValue: isNaN(rawArea) ? 0 : rawArea,
-            };
-          })
+          .map((plot) => ({
+            ...plot,
+            plotNo: parseInt(plot.plotNo),
+          }))
           .filter((plot) => plot.plotNo >= 306 && plot.plotNo <= 323);
 
         const part1 = filtered
@@ -35,7 +26,6 @@ const PlotMap = () => {
           .sort((a, b) => a.plotNo - b.plotNo);
 
         setPlots([...part1, ...part2]);
-        console.log("Loaded Plots:", [...part1, ...part2]); // for debug
       });
   }, []);
 
@@ -48,7 +38,7 @@ const PlotMap = () => {
         blocked: "bg-blue-500",
         hold: "bg-orange-500",
         sold: "bg-red-500",
-      }[status?.toLowerCase()] || "bg-gray-300";
+      }[status.toLowerCase()] || "bg-gray-300";
 
     return `${colorClass} ${baseClass}`;
   };
@@ -61,33 +51,23 @@ const PlotMap = () => {
         block: "text-blue-500",
         blocked: "text-blue-500",
         sold: "text-red-500",
-      }[status?.toLowerCase()] || "text-gray-600"
+      }[status.toLowerCase()] || "text-gray-600"
     );
   };
 
-  const applyAreaFilter = (plot) => {
-    return (
-      typeof plot.areaValue === "number" &&
-      plot.areaValue >= areaRange[0] &&
-      plot.areaValue <= areaRange[1]
-    );
+  const handleFilter = (area) => {
+    setSelectedArea(area);
   };
 
-  const handleSliderChange = (e) => {
-    const value = parseInt(e.target.value);
-    const rangeSize = 1000;
-    const min = Math.max(MIN_AREA, value - rangeSize / 2);
-    const max = Math.min(MAX_AREA, value + rangeSize / 2);
-    setAreaRange([min, max]);
-  };
+  const filteredPlots = selectedArea
+    ? plots.filter((plot) => plot.Area === selectedArea)
+    : plots;
 
-  const resetFilters = () => {
-    setAreaRange([MIN_AREA, MAX_AREA]);
-  };
+  const areaOptions = [...new Set(plots.map((plot) => plot.Area))];
 
   return (
     <div>
-      {/* Background Image */}
+      {/* Layout Image */}
       <div
         className="relative bg-contain bg-center h-[880px] bg-no-repeat"
         style={{ backgroundImage: `url("./images/future-layout.jpg")` }}
@@ -98,31 +78,49 @@ const PlotMap = () => {
           className="absolute top-5 right-5 w-40"
         />
 
+        {/* Area Filter */}
+        <div className="absolute top-5 left-5 bg-white p-2 rounded shadow z-50">
+          <select
+            className="p-2 border border-gray-300 rounded"
+            value={selectedArea}
+            onChange={(e) => handleFilter(e.target.value)}
+          >
+            <option value="">All Areas</option>
+            {areaOptions.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Plot Grid */}
         <div className="absolute top-[381px] left-[511px] p-4">
           <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-9">
-            {plots.map((plot) => (
+            {filteredPlots.map((plot) => (
               <div
                 key={plot.plotNo}
-                className={`relative border text-center w-[58px] h-[95px]
+                className={`relative border text-center w-[58px] h-[95px] 
                   flex items-center justify-center cursor-pointer
                   hover:bg-white hover:text-black 
                   ${
                     selectedPlot?.plotNo === plot.plotNo
                       ? "bg-[#FFFF00] text-black"
                       : getStatusClass(plot.status)
-                  }
-                  ${!applyAreaFilter(plot) ? "invisible" : ""}
-                `}
+                  }`}
                 onMouseEnter={() => setHoveredPlot(plot.plotNo)}
                 onMouseLeave={() => setHoveredPlot(null)}
                 onClick={() => setSelectedPlot(plot)}
               >
                 <p className="font-bold text-sm">{plot.plotNo}</p>
 
-                {/* Tooltip */}
+                {/* Tooltip on hover */}
                 {hoveredPlot === plot.plotNo && (
-                  <div className="absolute bottom-[100%] mb-2 left-1/2 -translate-x-1/2 w-[250px] bg-black text-white p-3 rounded-md shadow-lg z-50">
+                  <div
+                    className="absolute bottom-[100%] mb-2 left-1/2 -translate-x-1/2
+                      w-[250px] bg-black text-white p-3 rounded-md shadow-lg
+                      transition-all duration-300 z-50"
+                  >
                     <div className="flex justify-between mb-1">
                       <p className="font-bold">{plot.plotNo}</p>
                       <p className="text-sm">{plot.Area}</p>
@@ -143,34 +141,7 @@ const PlotMap = () => {
         </div>
       </div>
 
-      {/* Right Bottom - Filter Panel */}
-      <div className="fixed bottom-4 right-4 bg-white p-4 rounded shadow-lg z-50 w-64">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-bold">Filters</h3>
-          <button onClick={resetFilters} className="text-sm text-blue-500">
-            Reset
-          </button>
-        </div>
-        <div className="mb-2">
-          <label className="block text-sm font-medium mb-1">
-            Area: {areaRange[0]} - {areaRange[1]} Sq. Ft.
-          </label>
-          <div className="flex items-center space-x-2 text-xs">
-            <span>{MIN_AREA}</span>
-            <input
-              type="range"
-              min={MIN_AREA}
-              max={MAX_AREA}
-              value={(areaRange[0] + areaRange[1]) / 2}
-              onChange={handleSliderChange}
-              className="w-full"
-            />
-            <span>{MAX_AREA}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Left - Plot Details */}
+      {/* Bottom Left Popup - Plot Details */}
       {selectedPlot && (
         <div className="fixed bottom-4 left-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 w-[300px] z-50">
           <h2 className="text-lg font-bold mb-2">
@@ -227,9 +198,10 @@ const PlotMap = () => {
         </div>
       )}
 
-      {/* Bottom Left - Choose Plot Prompt */}
+      {/* Bottom Left Popup - Choose Plot */}
       {!selectedPlot && (
-        <div className="fixed bottom-4 left-4 bg-white flex justify-center items-center w-[300px] h-[100px] font-semibold px-4 py-2 rounded shadow-md z-50 text-xl">
+        <div className="fixed bottom-4 left-4 bg-white flex justify-center items-center
+         w-[300px] h-[100px] font-semibold px-4 py-2 rounded shadow-md z-50 text-xl">
           Choose Any Plot
         </div>
       )}
