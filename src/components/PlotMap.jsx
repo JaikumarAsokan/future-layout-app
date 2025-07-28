@@ -5,6 +5,7 @@ const PlotMap = () => {
   const [hoveredPlot, setHoveredPlot] = useState(null);
   const [selectedPlot, setSelectedPlot] = useState(null);
   const [areaRange, setAreaRange] = useState([189, 5527]);
+
   const MIN_AREA = 189;
   const MAX_AREA = 5527;
 
@@ -13,11 +14,16 @@ const PlotMap = () => {
       .then((res) => res.json())
       .then((data) => {
         const filtered = data
-          .map((plot) => ({
-            ...plot,
-            plotNo: parseInt(plot.plotNo),
-            areaValue: parseFloat(plot.Area.split(" ")[0]),
-          }))
+          .map((plot) => {
+            const rawArea = parseFloat(
+              typeof plot.Area === "string" ? plot.Area.split(" ")[0] : "0"
+            );
+            return {
+              ...plot,
+              plotNo: parseInt(plot.plotNo),
+              areaValue: isNaN(rawArea) ? 0 : rawArea,
+            };
+          })
           .filter((plot) => plot.plotNo >= 306 && plot.plotNo <= 323);
 
         const part1 = filtered
@@ -29,6 +35,7 @@ const PlotMap = () => {
           .sort((a, b) => a.plotNo - b.plotNo);
 
         setPlots([...part1, ...part2]);
+        console.log("Loaded Plots:", [...part1, ...part2]); // for debug
       });
   }, []);
 
@@ -41,7 +48,7 @@ const PlotMap = () => {
         blocked: "bg-blue-500",
         hold: "bg-orange-500",
         sold: "bg-red-500",
-      }[status.toLowerCase()] || "bg-gray-300";
+      }[status?.toLowerCase()] || "bg-gray-300";
 
     return `${colorClass} ${baseClass}`;
   };
@@ -54,13 +61,16 @@ const PlotMap = () => {
         block: "text-blue-500",
         blocked: "text-blue-500",
         sold: "text-red-500",
-      }[status.toLowerCase()] || "text-gray-600"
+      }[status?.toLowerCase()] || "text-gray-600"
     );
   };
 
   const applyAreaFilter = (plot) => {
-    const area = plot.areaValue;
-    return area >= areaRange[0] && area <= areaRange[1];
+    return (
+      typeof plot.areaValue === "number" &&
+      plot.areaValue >= areaRange[0] &&
+      plot.areaValue <= areaRange[1]
+    );
   };
 
   const handleSliderChange = (e) => {
@@ -94,7 +104,7 @@ const PlotMap = () => {
             {plots.map((plot) => (
               <div
                 key={plot.plotNo}
-                className={`relative border text-center w-[58px] h-[95px] 
+                className={`relative border text-center w-[58px] h-[95px]
                   flex items-center justify-center cursor-pointer
                   hover:bg-white hover:text-black 
                   ${
@@ -110,10 +120,9 @@ const PlotMap = () => {
               >
                 <p className="font-bold text-sm">{plot.plotNo}</p>
 
+                {/* Tooltip */}
                 {hoveredPlot === plot.plotNo && (
-                  <div className="absolute bottom-[100%] mb-2 left-1/2 -translate-x-1/2
-                      w-[250px] bg-black text-white p-3 rounded-md shadow-lg
-                      transition-all duration-300 z-50">
+                  <div className="absolute bottom-[100%] mb-2 left-1/2 -translate-x-1/2 w-[250px] bg-black text-white p-3 rounded-md shadow-lg z-50">
                     <div className="flex justify-between mb-1">
                       <p className="font-bold">{plot.plotNo}</p>
                       <p className="text-sm">{plot.Area}</p>
@@ -161,7 +170,7 @@ const PlotMap = () => {
         </div>
       </div>
 
-      {/* Bottom Left - Selected Plot Details */}
+      {/* Bottom Left - Plot Details */}
       {selectedPlot && (
         <div className="fixed bottom-4 left-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 w-[300px] z-50">
           <h2 className="text-lg font-bold mb-2">
@@ -218,10 +227,9 @@ const PlotMap = () => {
         </div>
       )}
 
-      {/* Choose Plot Popup */}
+      {/* Bottom Left - Choose Plot Prompt */}
       {!selectedPlot && (
-        <div className="fixed bottom-4 left-4 bg-white flex justify-center items-center
-          w-[300px] h-[100px] font-semibold px-4 py-2 rounded shadow-md z-50 text-xl">
+        <div className="fixed bottom-4 left-4 bg-white flex justify-center items-center w-[300px] h-[100px] font-semibold px-4 py-2 rounded shadow-md z-50 text-xl">
           Choose Any Plot
         </div>
       )}
